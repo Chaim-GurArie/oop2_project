@@ -39,4 +39,17 @@ add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
 
 if(MSVC)
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
+    # -fsanitize=address (Debug builds only, see above) needs its runtime DLL next
+    # to the executable, or launching outside the debugger fails with STATUS_DLL_NOT_FOUND.
+    get_filename_component(MSVC_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    set(ASAN_RUNTIME_DLL "${MSVC_BIN_DIR}/clang_rt.asan_dynamic-x86_64.dll")
+    if(EXISTS "${ASAN_RUNTIME_DLL}")
+        add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${ASAN_RUNTIME_DLL}"
+            "$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>"
+            COMMENT "Copying AddressSanitizer runtime DLL..."
+        )
+    endif()
 endif()
